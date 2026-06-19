@@ -1,0 +1,118 @@
+// go-multiseed settings.conf
+// Place this file at: /usr/local/sDNS.<TICKER>/settings.conf
+// The seeder auto-discovers all directories matching that pattern on startup.
+//
+// Lines starting with // are comments. Block comments /* ... */ are also supported.
+
+// ─── Blockchain Identity ──────────────────────────────────────────────────────
+
+// Human-readable name of the blockchain
+blockchain_name = "Bitcoin"
+
+// Ticker symbol. Also used as the directory name: /usr/local/sDNS.<TICKER>/
+ticker = "BTC"
+
+// ─── Threading ────────────────────────────────────────────────────────────────
+
+// Number of parallel P2P crawler goroutines
+nThreads = "96"
+
+// UDP port the DNS server listens on (53 requires root or setcap)
+nPort = "53"
+
+// Number of DNS server handler goroutines
+nDnsThreads = "4"
+
+// ─── DNS Server Identity ──────────────────────────────────────────────────────
+
+// DNS SOA / NS records — used when running in local DNS server mode
+mbox = "admin@example.com"
+ns   = "vps.example.com"
+
+// Full subdomain that will serve seed IPs via DNS
+// Must match the A/NS records in your domain's DNS zone
+host = "seed-btc.example.com"
+
+// Public IPv4 of the server running this seeder (used in NS glue record)
+ip_addr = "1.2.3.4"
+
+// ─── Bitcoin P2P Protocol ─────────────────────────────────────────────────────
+// Find these values in the coin's source:
+//   protocol_version      → src/version.h  PROTOCOL_VERSION
+//   init_proto_version    → src/version.h  INIT_PROTO_VERSION
+//   min_peer_proto_version → src/version.h MIN_PEER_PROTO_VERSION (or MIN_PROTO_VERSION)
+//   caddr_time_version    → src/version.h  CADDR_TIME_VERSION (usually 31402)
+
+protocol_version      = "70015"
+init_proto_version    = "209"
+min_peer_proto_version = "209"
+caddr_time_version    = "31402"
+
+// Network magic bytes — find in src/chainparams.cpp (pchMessageStart)
+pchMessageStart_0 = "0xf9"
+pchMessageStart_1 = "0xbe"
+pchMessageStart_2 = "0xb4"
+pchMessageStart_3 = "0xd9"
+
+// Default P2P port — find in src/chainparams.cpp (nDefaultPort)
+wallet_port = "8333"
+
+// ─── Block Height ─────────────────────────────────────────────────────────────
+// A node is only considered "good" if its reported block height >= current height.
+// The seeder fetches live height from an explorer URL, falling back to block_count.
+
+// Explorer API that returns the current block height as a plain integer
+// Leave empty to use static block_count only
+explorer_url = "https://blockchain.info/q/getblockcount"
+
+// Optional second explorer for failover
+second_explorer_url = "https://mempool.space/api/blocks/tip/height"
+
+// How often (seconds) to re-query the explorer
+explorer_requery_seconds = "120"
+
+// Static fallback block height. Nodes below this are rejected.
+// Update to a recent value before starting — a stale value accepts out-of-sync nodes.
+block_count = "850000"
+
+// ─── Bootstrap Seed Nodes ─────────────────────────────────────────────────────
+// At least one reachable node is required for the crawler to bootstrap the network.
+// Add known-good seed IPs or hostnames from the coin's src/chainparams.cpp (vSeeds).
+// Hostnames are resolved at startup.
+
+seed_1  = "seed.bitcoin.sipa.be"
+seed_2  = "dnsseed.bluematt.me"
+seed_3  = "dnsseed.bitcoin.dashjr.org"
+seed_4  = "seed.bitcoinstats.com"
+seed_5  = "seed.bitcoin.jonasschnelli.ch"
+seed_6  = ""
+seed_7  = ""
+seed_8  = ""
+seed_9  = ""
+seed_10 = ""
+
+// ─── Cloudflare DNS Integration (optional) ───────────────────────────────────
+// If cf_api_key is set, the seeder pushes good IPs to Cloudflare DNS every 30 minutes.
+// This replaces the Python cf-uploader/seeder.py from the legacy C++ version.
+//
+// Setup:
+//   1. Add your domain to Cloudflare
+//   2. Create an A record: <cf_domain_prefix>.<cf_domain> → any placeholder IP
+//   3. Fill in the fields below with your Cloudflare credentials
+
+// Your domain registered with Cloudflare
+cf_domain = "example.com"
+
+// Subdomain prefix for seed records (creates seed-btc.example.com)
+cf_domain_prefix = "seed-btc"
+
+// Cloudflare account email
+cf_username = "your@email.com"
+
+// Global API Key — https://dash.cloudflare.com/profile/api-tokens
+// Leave empty to disable Cloudflare sync
+cf_api_key = ""
+
+// File written by the seeder listing all crawled nodes (ip:port + good flag).
+// Legacy: also read by cf-uploader/seeder.py if you still use it.
+cf_seed_dump = "dnsseed.dump"
