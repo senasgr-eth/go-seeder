@@ -222,13 +222,13 @@ func ParseAddrMsg(payload []byte, withTimestamp bool) ([]netip.AddrPort, error) 
 	return addrs, nil
 }
 
-// ParseVersionPayload extracts version and start height from a version message.
-func ParseVersionPayload(payload []byte) (version int32, startHeight int32, userAgent string, err error) {
+// ParseVersionPayload extracts version, services, and start height from a
+// version message.
+func ParseVersionPayload(payload []byte) (version int32, services uint64, startHeight int32, userAgent string, err error) {
 	r := bytes.NewReader(payload)
 	if err = binary.Read(r, binary.LittleEndian, &version); err != nil {
 		return
 	}
-	var services uint64
 	if err = binary.Read(r, binary.LittleEndian, &services); err != nil {
 		return
 	}

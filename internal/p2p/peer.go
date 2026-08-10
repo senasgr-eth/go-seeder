@@ -72,11 +72,12 @@ func Crawl(ap netip.AddrPort, cfg PeerConfig) (PeerResult, error) {
 
 		switch cmd {
 		case "version":
-			ver, height, ua, err := ParseVersionPayload(payload)
+			ver, svc, height, ua, err := ParseVersionPayload(payload)
 			if err != nil {
 				return result, fmt.Errorf("parse version: %w", err)
 			}
 			result.ClientVersion = ver
+			result.Services = svc | NodeNetwork
 			result.Height = int(height)
 			result.SubVersion = ua
 			gotVersion = true
@@ -102,7 +103,6 @@ func Crawl(ap netip.AddrPort, cfg PeerConfig) (PeerResult, error) {
 			// After collecting addr, we have enough info
 			if gotVersion && gotVerack {
 				result.Good = true
-				result.Services = NodeNetwork
 				return result, nil
 			}
 		}
@@ -110,7 +110,6 @@ func Crawl(ap netip.AddrPort, cfg PeerConfig) (PeerResult, error) {
 
 	if gotVersion && gotVerack {
 		result.Good = true
-		result.Services = NodeNetwork
 	}
 	return result, nil
 }
