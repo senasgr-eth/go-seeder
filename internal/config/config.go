@@ -24,6 +24,7 @@ type CloudflareConfig struct {
 	Username     string
 	APIKey       string
 	SeedDumpFile string
+	ServicesBits []uint64
 }
 
 type CoinConfig struct {
@@ -109,6 +110,7 @@ func Load(path string) (*CoinConfig, error) {
 	cfg.CF.Username = kv["cf_username"]
 	cfg.CF.APIKey = kv["cf_api_key"]
 	cfg.CF.SeedDumpFile = kv["cf_seed_dump"]
+	cfg.CF.ServicesBits = parseServicesBits(kv["cf_svc_bits"])
 
 	parseInt := func(key string, def int) int {
 		if v := kv[key]; v != "" {
@@ -170,4 +172,24 @@ func Discover() ([]*CoinConfig, error) {
 		configs = append(configs, cfg)
 	}
 	return configs, nil
+}
+
+// parseServicesBits parses a comma-separated list of service bit values,
+// e.g. "1,3" or "0x1,0x3". Empty input yields an empty list.
+func parseServicesBits(s string) []uint64 {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	var bits []uint64
+	for _, part := range strings.Split(s, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if n, err := strconv.ParseUint(part, 0, 64); err == nil {
+			bits = append(bits, n)
+		}
+	}
+	return bits
 }

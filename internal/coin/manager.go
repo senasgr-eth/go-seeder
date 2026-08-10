@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/netip"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,6 +132,23 @@ func (m *Manager) syncCloudflare() {
 		log.Printf("[%s] cloudflare sync: %v", m.cfg.Ticker, err)
 	} else {
 		log.Printf("[%s] cloudflare sync: pushed %d IPs", m.cfg.Ticker, len(allGood))
+	}
+	// Bitcoin Core 0.21+ queries DNS seeds by their service bits using the
+	// "x%x." prefix (e.g. x3.seed.example.com). Publish matching records so
+	// modern clients can resolve the seed. Default to NODE_NETWORK (1) and
+	// NODE_NETWORK|NODE_WITNESS (3) when cf_svc_bits is unset.
+	svcBits := m.cfg.CF.ServicesBits
+	if len(svcBits) == 0 {
+		svcBits = []uint64{1, 3}
+	}
+	for _, bits := range svcBits {
+		good := append(m.db.GetGoodWithServices(false, maxCFSeeds, bits), m.db.GetGoodWithServices(true, maxCFSeeds, bits)...)
+		prefix := strconv.FormatUint(bits, 16)
+		if err := cf.Sync(m.cfg.CF.Domain, "x"+prefix+"."+m.cfg.CF.DomainPrefix, good, maxCFSeeds); err != nil {
+			log.Printf("[%s] cloudflare sync x%x: %v", m.cfg.Ticker, bits, err)
+		} else {
+			log.Printf("[%s] cloudflare sync x%x: pushed %d IPs", m.cfg.Ticker, bits, len(good))
+		}
 	}
 }
 

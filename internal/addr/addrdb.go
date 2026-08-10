@@ -303,6 +303,45 @@ func (db *AddrDB) GetGood(ipv6 bool, max int) []netip.Addr {
 	return result
 }
 
+// GetGoodWithServices returns good node IPs that advertise at least the
+// required service bits (used for x%x.-prefixed DNS seed names).
+func (db *AddrDB) GetGoodWithServices(ipv6 bool, max int, required uint64) []netip.Addr {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	var result []netip.Addr
+	for _, info := range db.nodes {
+		info.mu.Lock()
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
+		services := info.Services
+		addr := info.Addr.Addr()
+		info.mu.Unlock()
+
+		if !good {
+			continue
+		}
+		if services&required != required {
+			continue
+		}
+		is6 := addr.Is6()
+		if ipv6 && !is6 {
+			continue
+		}
+		if !ipv6 && is6 {
+			continue
+		}
+		result = append(result, addr)
+		if len(result) >= max {
+			break
+		}
+	}
+	rand.Shuffle(len(result), func(i, j int) { result[i], result[j] = result[j], result[i] })
+	if len(result) > max {
+		result = result[:max]
+	}
+	return result
+}
+
 func (db *AddrDB) Stats() Stats {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
