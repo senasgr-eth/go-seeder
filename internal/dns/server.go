@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ const (
 // AddrSource is implemented by coin.Manager to provide good IPs for DNS responses.
 type AddrSource interface {
 	GoodAddrs(ipv6 bool) []netip.Addr
+	GoodAddrsWithServices(ipv6 bool, required uint64) []netip.Addr
 	Host() string
 	NS() string
 	Mbox() string
@@ -71,6 +73,19 @@ func (s *Server) handleQuery(w dns.ResponseWriter, r *dns.Msg) {
 	q := r.Question[0]
 	qname := strings.ToLower(q.Name)
 
+	// Parse optional x<hex> service-bits prefix (e.g. x1000009.seed.jkc.s3na.xyz.)
+	var requiredServices uint64
+	if strings.HasPrefix(qname, "x") {
+		dotIdx := strings.Index(qname[1:], ".")
+		if dotIdx >= 0 {
+			hexStr := qname[1 : 1+dotIdx]
+			if n, err := strconv.ParseUint(hexStr, 16, 64); err == nil {
+				requiredServices = n
+				qname = qname[2+dotIdx:]
+			}
+		}
+	}
+
 	src, ok := s.coins[qname]
 	if !ok {
 		m.SetRcode(r, dns.RcodeNameError)
@@ -80,7 +95,12 @@ func (s *Server) handleQuery(w dns.ResponseWriter, r *dns.Msg) {
 
 	switch q.Qtype {
 	case dns.TypeA:
-		addrs := src.GoodAddrs(false)
+		var addrs []netip.Addr
+		if requiredServices > 0 {
+			addrs = src.GoodAddrsWithServices(false, requiredServices)
+		} else {
+			addrs = src.GoodAddrs(false)
+		}
 		limit(addrs, maxIPsPerResponse)
 		for _, ip := range addrs {
 			m.Answer = append(m.Answer, &dns.A{
@@ -90,7 +110,12 @@ func (s *Server) handleQuery(w dns.ResponseWriter, r *dns.Msg) {
 		}
 
 	case dns.TypeAAAA:
-		addrs := src.GoodAddrs(true)
+		var addrs []netip.Addr
+		if requiredServices > 0 {
+			addrs = src.GoodAddrsWithServices(true, requiredServices)
+		} else {
+			addrs = src.GoodAddrs(true)
+		}
 		limit(addrs, maxIPsPerResponse)
 		for _, ip := range addrs {
 			m.Answer = append(m.Answer, &dns.AAAA{

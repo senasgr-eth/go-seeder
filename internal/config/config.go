@@ -37,6 +37,7 @@ type CoinConfig struct {
 	CAddrTimeVersion    int32
 	NetMagic            [4]byte
 	WalletPort          uint16
+	RequiredServices    uint64
 	ExplorerURL         string
 	SecondExplorerURL   string
 	ExplorerRequerySecs int
@@ -139,6 +140,18 @@ func Load(path string) (*CoinConfig, error) {
 	cfg.WalletPort = uint16(parseInt("wallet_port", 8333))
 	cfg.ExplorerRequerySecs = parseInt("explorer_requery_seconds", cfg.ExplorerRequerySecs)
 	cfg.BlockCount = int64(parseInt("block_count", 0))
+
+	parseUint64Hex := func(key string) uint64 {
+		v := kv[key]
+		if v == "" {
+			return 0
+		}
+		v = strings.TrimPrefix(v, "0x")
+		v = strings.TrimPrefix(v, "0X")
+		n, _ := strconv.ParseUint(v, 16, 64)
+		return n
+	}
+	cfg.RequiredServices = parseUint64Hex("required_services")
 
 	parseHex := func(key string) byte {
 		v := strings.TrimPrefix(kv[key], "0x")

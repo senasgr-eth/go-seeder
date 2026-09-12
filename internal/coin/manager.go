@@ -35,7 +35,7 @@ type Manager struct {
 
 // dataDir is where we store the DB and dump files for this coin: e.g. /usr/local/sDNS.<TICKER>/
 func NewManager(cfg *config.CoinConfig, dataDir string) *Manager {
-	db := addr.New(cfg.MinPeerProtoVersion, cfg.WalletPort, cfg.BlockCount)
+	db := addr.New(cfg.MinPeerProtoVersion, cfg.WalletPort, cfg.BlockCount, cfg.RequiredServices)
 	hp := height.New(
 		cfg.ExplorerURL,
 		cfg.SecondExplorerURL,
@@ -162,6 +162,11 @@ func (m *Manager) dumpFile() string {
 // GoodAddrs implements dns.AddrSource.
 func (m *Manager) GoodAddrs(ipv6 bool) []netip.Addr {
 	return m.db.GetGood(ipv6, 50)
+}
+
+// GoodAddrsWithServices implements dns.AddrSource for x<hex> prefix queries.
+func (m *Manager) GoodAddrsWithServices(ipv6 bool, required uint64) []netip.Addr {
+	return m.db.GetGoodWithServices(ipv6, 50, required)
 }
 
 // Host implements dns.AddrSource.

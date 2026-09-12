@@ -60,12 +60,11 @@ type AddrInfo struct {
 	BanUntil      time.Time
 }
 
-func (a *AddrInfo) isGood(minProtoVersion int32, walletPort uint16, minHeight int64) bool {
+func (a *AddrInfo) isGood(minProtoVersion int32, walletPort uint16, minHeight int64, requiredServices uint64) bool {
 	if a.Addr.Port() != walletPort {
 		return false
 	}
-	const nodeNetwork = uint64(1)
-	if a.Services&nodeNetwork == 0 {
+	if requiredServices > 0 && a.Services&requiredServices != requiredServices {
 		return false
 	}
 	ip := a.Addr.Addr()
@@ -152,14 +151,16 @@ type AddrDB struct {
 	minProtoVersion int32
 	walletPort      uint16
 	minHeight       int64
+	requiredServices uint64
 }
 
-func New(minProtoVersion int32, walletPort uint16, minHeight int64) *AddrDB {
+func New(minProtoVersion int32, walletPort uint16, minHeight int64, requiredServices uint64) *AddrDB {
 	return &AddrDB{
 		nodes:           make(map[netip.AddrPort]*AddrInfo),
 		minProtoVersion: minProtoVersion,
 		walletPort:      walletPort,
 		minHeight:       minHeight,
+		requiredServices: requiredServices,
 	}
 }
 
@@ -275,7 +276,7 @@ func (db *AddrDB) GetGood(ipv6 bool, max int) []netip.Addr {
 	var result []netip.Addr
 	for _, info := range db.nodes {
 		info.mu.Lock()
-		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices)
 		addr := info.Addr.Addr()
 		info.mu.Unlock()
 
@@ -310,7 +311,7 @@ func (db *AddrDB) GetGoodWithServices(ipv6 bool, max int, required uint64) []net
 	var result []netip.Addr
 	for _, info := range db.nodes {
 		info.mu.Lock()
-		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices)
 		services := info.Services
 		addr := info.Addr.Addr()
 		info.mu.Unlock()
@@ -350,7 +351,7 @@ func (db *AddrDB) Stats() Stats {
 		info.mu.Lock()
 		if now.Before(info.BanUntil) {
 			s.Banned++
-		} else if info.isGood(db.minProtoVersion, db.walletPort, db.minHeight) {
+		} else if info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices) {
 			s.Good++
 		}
 		if !info.OurLastTry.IsZero() {
@@ -375,7 +376,7 @@ func (db *AddrDB) WriteDump(path string) error {
 
 	for _, info := range db.nodes {
 		info.mu.Lock()
-		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices)
 		ap := info.Addr
 		info.mu.Unlock()
 
