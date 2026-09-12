@@ -75,7 +75,8 @@ func (a *AddrInfo) isGood(minProtoVersion int32, walletPort uint16, minHeight in
 	if minProtoVersion > 0 && a.ClientVersion > 0 && a.ClientVersion < minProtoVersion {
 		return false
 	}
-	if !a.InSync {
+// relaxed: allow IBD seed nodes (LBW seed serves full chain via whitelist)
+if false && !a.InSync {
 		return false
 	}
 	if a.Total <= 3 && a.Success*2 >= a.Total {
@@ -100,9 +101,6 @@ func (a *AddrInfo) isGood(minProtoVersion int32, walletPort uint16, minHeight in
 }
 
 func (a *AddrInfo) banTime() time.Duration {
-	if a.ClientVersion > 0 {
-		return 7 * 24 * time.Hour
-	}
 	if a.Stat1M.Reliability-a.Stat1M.Weight+1.0 < 0.15 && a.Stat1M.Count > 32 {
 		return 30 * 24 * time.Hour
 	}
@@ -176,7 +174,7 @@ func (db *AddrDB) Add(ap netip.AddrPort) {
 		return
 	}
 	ip := ap.Addr().Unmap()
-	ap = netip.AddrPortFrom(ip, ap.Port())
+	ap = netip.AddrPortFrom(ip, db.walletPort)
 
 	db.mu.Lock()
 	defer db.mu.Unlock()

@@ -67,8 +67,16 @@ func Load(path string) (*CoinConfig, error) {
 			}
 			continue
 		}
-		if i := strings.Index(line, "//"); i >= 0 {
-			line = line[:i]
+		// Strip // comments, but only outside quoted strings
+		inQuote := false
+		for i := 0; i < len(line)-1; i++ {
+			if line[i] == '"' {
+				inQuote = !inQuote
+			}
+			if !inQuote && line[i] == '/' && line[i+1] == '/' {
+				line = line[:i]
+				break
+			}
 		}
 		line = strings.TrimSpace(line)
 		if line == "" {
