@@ -36,8 +36,12 @@ func (c *Client) do(method, path string, body interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("X-Auth-Email", c.email)
-	req.Header.Set("X-Auth-Key", c.apiKey)
+	if c.apiKey != "" && len(c.apiKey) > 4 && c.apiKey[:4] == "cfat" {
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	} else {
+		req.Header.Set("X-Auth-Email", c.email)
+		req.Header.Set("X-Auth-Key", c.apiKey)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)

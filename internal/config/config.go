@@ -115,8 +115,8 @@ func Load(path string) (*CoinConfig, error) {
 	cfg.DNS.IPAddr = kv["ip_addr"]
 	cfg.CF.Domain = kv["cf_domain"]
 	cfg.CF.DomainPrefix = kv["cf_domain_prefix"]
-	cfg.CF.Username = kv["cf_username"]
-	cfg.CF.APIKey = kv["cf_api_key"]
+	cfg.CF.Username = kv["cf_account_id"]
+	cfg.CF.APIKey = kv["cf_api_token"]
 	cfg.CF.SeedDumpFile = kv["cf_seed_dump"]
 	cfg.CF.ServicesBits = parseServicesBits(kv["cf_svc_bits"])
 
