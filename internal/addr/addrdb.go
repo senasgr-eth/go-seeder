@@ -60,11 +60,8 @@ type AddrInfo struct {
 	BanUntil      time.Time
 }
 
-func (a *AddrInfo) isGood(minProtoVersion int32, walletPort uint16, minHeight int64, requiredServices uint64) bool {
+func (a *AddrInfo) isGood(minProtoVersion int32, walletPort uint16, minHeight int64) bool {
 	if a.Addr.Port() != walletPort {
-		return false
-	}
-	if requiredServices > 0 && a.Services&requiredServices != requiredServices {
 		return false
 	}
 	ip := a.Addr.Addr()
@@ -276,11 +273,15 @@ func (db *AddrDB) GetGood(ipv6 bool, max int) []netip.Addr {
 	var result []netip.Addr
 	for _, info := range db.nodes {
 		info.mu.Lock()
-		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices)
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
+		services := info.Services
 		addr := info.Addr.Addr()
 		info.mu.Unlock()
 
 		if !good {
+			continue
+		}
+		if db.requiredServices > 0 && services&db.requiredServices != db.requiredServices {
 			continue
 		}
 		is6 := addr.Is6()
@@ -311,7 +312,7 @@ func (db *AddrDB) GetGoodWithServices(ipv6 bool, max int, required uint64) []net
 	var result []netip.Addr
 	for _, info := range db.nodes {
 		info.mu.Lock()
-		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices)
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
 		services := info.Services
 		addr := info.Addr.Addr()
 		info.mu.Unlock()
@@ -351,7 +352,7 @@ func (db *AddrDB) Stats() Stats {
 		info.mu.Lock()
 		if now.Before(info.BanUntil) {
 			s.Banned++
-		} else if info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices) {
+		} else if info.isGood(db.minProtoVersion, db.walletPort, db.minHeight) {
 			s.Good++
 		}
 		if !info.OurLastTry.IsZero() {
@@ -376,7 +377,7 @@ func (db *AddrDB) WriteDump(path string) error {
 
 	for _, info := range db.nodes {
 		info.mu.Lock()
-		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight, db.requiredServices)
+		good := info.isGood(db.minProtoVersion, db.walletPort, db.minHeight)
 		ap := info.Addr
 		info.mu.Unlock()
 
